@@ -5,7 +5,7 @@ A small Node.js teaching demo of raw Gemini `generateContent` REST API function 
 ## Quick start
 
 1. Install Node.js 20+ and MySQL 8+.
-2. Run `npm install`, then copy `.env.example` to `.env` and set the Gemini API key plus MySQL credentials.
+2. Run `npm install`, then copy `.env.example` to `.env` and set the Gemini API key, AWS region/SQS queue URL, and MySQL credentials. AWS authentication follows the standard AWS SDK credential chain (for example, `aws configure` locally or an IAM role in AWS).
 3. Create the database/user shown in the PRD, then apply `mysql -u meta_analysis -p meta_analysis_mvp < src/db/mysql/migrations/001-create-runs.sql`.
 4. Start with `npm start`.
 5. Submit and poll a run:
@@ -20,9 +20,13 @@ curl http://localhost:3000/runs/<runId>
 
 Run `npm test` for deterministic validators, a complete mocked orchestration, runtime limit guards, and recovery semantics. Tests never call Gemini or MySQL.
 
+## SQS worker and logs
+
+Create an SQS **Standard** queue and attach a dead-letter queue with a redrive policy of three receives. Set `SQS_QUEUE_URL` to the main queue URL. `npm start` runs Express and one SQS worker in the same Node process, so Pino writes API, queue, and agent lifecycle events to the same terminal. The worker long-polls for 20 seconds, starts each message with five minutes of visibility, and extends visibility every two minutes while a run is active.
+
 ## The lifecycle
 
-`POST /runs` saves the initial run row and starts the loop without waiting. Every turn first persists the complete Gemini model content and a `pending_action`; only then is the selected tool executed. Its Gemini `functionResponse`, updated context, and step count are committed together. On boot, stale `running` rows are adopted; a pending action is replayed before another agent decision is requested.
+`POST /runs` saves the initial run row and queues its ID without waiting. The in-process SQS worker receives the ID and runs the loop. Every turn first persists the complete Gemini model content and a `pending_action`; only then is the selected tool executed. Its Gemini `functionResponse`, updated context, and step count are committed together. On boot, stale `running` rows are adopted; a pending action is replayed before another agent decision is requested.
 
 Recovery is at-least-once for external phase calls: a crash after a phase response arrives but before it is committed can cause the phase API call to be repeated. It is not exactly-once.
 
