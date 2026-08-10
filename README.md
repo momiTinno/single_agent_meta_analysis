@@ -6,7 +6,7 @@ A small Node.js teaching demo of raw OpenAI Responses API tool calling, a custom
 
 1. Install Node.js 20+ and MySQL 8+.
 2. Run `npm install`, then copy `.env.example` to `.env` and set the OpenAI key plus MySQL credentials.
-3. Create the database/user shown in the PRD, then apply `mysql -u meta_analysis -p meta_analysis_mvp < sql/001_create_runs.sql`.
+3. Create the database/user shown in the PRD, then apply `mysql -u meta_analysis -p meta_analysis_mvp < src/db/mysql/migrations/001-create-runs.sql`.
 4. Start with `npm start`.
 5. Submit and poll a run:
 
@@ -28,4 +28,8 @@ Recovery is at-least-once for external phase calls: a crash after a phase respon
 
 ## Reading guide
 
-Start with `sql/001_create_runs.sql`, then `src/agent.js`, `src/toolSchemas.js`, `src/runStore.js`, a phase and validator, `src/recovery.js`, and finally `index.js`. The user-story backlog is in `USER_STORIES.md`.
+## Module layout
+
+`src/config` contains startup configuration; `src/db/mysql` contains the direct MySQL connection and migration; `src/modules/runs` owns the HTTP and persistence lifecycle; `src/modules/agent` exposes the agent contracts; `src/modules/analysis` owns phase calls and validators; `src/modules/openai` owns raw API transport; and `src/orchestration` owns the durable agent loop and terminals.
+
+Start with `src/db/mysql/migrations/001-create-runs.sql`, then `src/orchestration/agent-loop.js`, `src/modules/agent/schemas/tool.schemas.js`, `src/modules/runs/services/run-db.service.js`, a phase and validator, `src/modules/runs/services/run-recovery.service.js`, and finally `src/index.js`. The user-story backlog is in `USER_STORIES.md`.

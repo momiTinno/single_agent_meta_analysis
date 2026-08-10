@@ -1,0 +1,1 @@
+export const PHASE_ONE_SCHEMA = { type: "object", properties: { findings: { type: "array", items: { type: "object", properties: { claim: { type: "string" }, evidence: { type: "array", items: { type: "string" } } }, required: ["claim", "evidence"], additionalProperties: false } } }, required: ["findings"], additionalProperties: false };

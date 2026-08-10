@@ -1,0 +1,1 @@
+export const PHASE_THREE_SCHEMA = { type: "object", properties: { summary: { type: "string" }, evidence: { type: "string" }, recommendations: { type: "string" } }, required: ["summary", "evidence", "recommendations"], additionalProperties: false };

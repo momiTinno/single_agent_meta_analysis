@@ -1,0 +1,1 @@
+export const PHASE_TWO_SCHEMA = { type: "object", properties: { hypotheses: { type: "array", items: { type: "object", properties: { hypothesisId: { type: "string" }, assessment: { type: "string" } }, required: ["hypothesisId", "assessment"], additionalProperties: false } } }, required: ["hypotheses"], additionalProperties: false };
