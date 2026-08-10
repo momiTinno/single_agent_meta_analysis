@@ -16,6 +16,9 @@ curl -X POST http://localhost:3000/runs \
   -d '{"turns":[{"turn":1,"speaker":"user","sentences":{"0":"I shop weekly.","1":"Price matters most."}}],"bmc":{"h0":"Urban shoppers","h1":"Price is the primary driver"}}'
 
 curl http://localhost:3000/runs/<runId>
+
+# After status is "success", retrieve only the final analysis artifact:
+curl http://localhost:3000/runs/<runId>/artifact
 ```
 
 Run `npm test` for deterministic validators, a complete mocked orchestration, runtime limit guards, and recovery semantics. Tests never call Gemini or MySQL.
