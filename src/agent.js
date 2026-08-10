@@ -40,7 +40,7 @@ export async function runAgent(runId, deps = {}) {
     const messages = [...run.messages, functionOutput(action.callId, result.payload)];
     await store.completeAction(runId, { messages, ctx: result.ctx || run.ctx, status: result.status, artifact: result.artifact, error: result.error });
     log.info({ step: run.step, tool: action.name }, "tool_result_saved");
-    if (result.status !== "running") return;
+    if (result.status && result.status !== "running") return;
   }
 }
 

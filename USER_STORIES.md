@@ -17,24 +17,24 @@ This backlog turns the PRD into small, testable slices. The implementation order
 ## Agent orchestration
 
 - [x] **US-07 — Visible agent choice:** As a learner, I can read explicit, strict function-tool schemas and see one model-selected tool per orchestration turn.
-- [ ] **US-08 — Durable tool sequence:** As a learner, I can reconstruct the Responses API history from persisted model output and `function_call_output` items.
-- [ ] **US-09 — Phase analysis:** As a learner, I can see each analysis phase run as a separate structured-output Responses call.
-- [ ] **US-10 — Deterministic checks:** As a learner, I can distinguish schema-constrained model output from plain-JavaScript domain validation.
-- [ ] **US-11 — Model-directed retry:** As a learner, I can see validator issues returned to the agent as retry hints while the runtime owns hard caps.
-- [ ] **US-12 — Terminal result:** As an API caller, a valid workflow finalizes a structured artifact; an unrecoverable workflow stores an abort reason.
+- [x] **US-08 — Durable tool sequence:** As a learner, I can reconstruct the Responses API history from persisted model output and `function_call_output` items.
+- [x] **US-09 — Phase analysis:** As a learner, I can see each analysis phase run as a separate structured-output Responses call.
+- [x] **US-10 — Deterministic checks:** As a learner, I can distinguish schema-constrained model output from plain-JavaScript domain validation.
+- [x] **US-11 — Model-directed retry:** As a learner, I can see validator issues returned to the agent as retry hints while the runtime owns hard caps.
+- [x] **US-12 — Terminal result:** As an API caller, a valid workflow finalizes a structured artifact; an unrecoverable workflow stores an abort reason.
 
 ## Reliability and limits
 
-- [ ] **US-13 — Write-ahead execution:** As a learner, the chosen call ID, tool name, and arguments are committed before any tool runs.
-- [ ] **US-14 — Restart recovery:** As a learner, restarting the process re-adopts stale running rows and resumes a saved pending action before asking the agent again.
-- [ ] **US-15 — Idempotent replay:** As a learner, replaying an already completed phase call reuses its stored result, and finalization is idempotent.
-- [ ] **US-16 — Hard limits:** As an operator, phase attempts and orchestration steps cannot exceed configured limits.
-- [ ] **US-17 — Observable lifecycle:** As an operator, structured logs identify the run, step, tool, and concise lifecycle event without exposing transcript content or credentials.
+- [x] **US-13 — Write-ahead execution:** As a learner, the chosen call ID, tool name, and arguments are committed before any tool runs.
+- [x] **US-14 — Restart recovery:** As a learner, restarting the process re-adopts stale running rows and resumes a saved pending action before asking the agent again.
+- [x] **US-15 — Idempotent replay:** As a learner, replaying an already completed phase call reuses its stored result, and finalization is idempotent.
+- [x] **US-16 — Hard limits:** As an operator, phase attempts and orchestration steps cannot exceed configured limits.
+- [x] **US-17 — Observable lifecycle:** As an operator, structured logs identify the run, step, tool, and concise lifecycle event without exposing transcript content or credentials.
 
 ## Verification and documentation
 
-- [ ] **US-18 — Focused tests:** As a contributor, I can run Vitest coverage for validators, limits, and recovery behavior without calling OpenAI.
-- [ ] **US-19 — Guided reading:** As a contributor, the README explains setup, an end-to-end example, recovery semantics, and the recommended code-reading order.
+- [x] **US-18 — Focused tests:** As a contributor, I can run Vitest coverage for validators, limits, and recovery behavior without calling OpenAI.
+- [x] **US-19 — Guided reading:** As a contributor, the README explains setup, an end-to-end example, recovery semantics, and the recommended code-reading order.
 
 ## Acceptance map
 
