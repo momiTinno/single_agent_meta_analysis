@@ -1,6 +1,6 @@
 const retryParameters = { type: "object", properties: { retryHint: { type: ["string", "null"] } }, required: ["retryHint"], additionalProperties: false };
 const noParameters = { type: "object", properties: {}, required: [], additionalProperties: false };
-const tool = (name, description, parameters) => ({ type: "function", name, description, strict: true, parameters });
+const tool = (name, description, parameters) => ({ name, description, parameters });
 export const TOOL_SCHEMAS = [
   tool("run_phase_1", "Run phase 1 or retry it using validator feedback.", retryParameters),
   tool("validate_phase_1", "Deterministically validate phase 1.", noParameters),

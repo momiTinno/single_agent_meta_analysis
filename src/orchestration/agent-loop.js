@@ -1,5 +1,5 @@
 import { config } from "../config/app.config.js";
-import { callOpenAI as defaultCallOpenAI } from "../modules/openai/openai.client.js";
+import { callGemini as defaultCallGemini, candidateContent } from "../modules/gemini/gemini.client.js";
 import { TOOL_SCHEMAS } from "../modules/agent/schemas/tool.schemas.js";
 import { AGENT_SYSTEM_PROMPT } from "../modules/agent/agent.prompt.js";
 import { runPhase1 } from "../modules/analysis/phases/phase-one/phase-one.service.js";
@@ -13,11 +13,11 @@ import { runLogger } from "../utils/logger.util.js";
 import { runStore as defaultStore } from "../modules/runs/services/run-db.service.js";
 
 const phaseFor = (name) => ({ run_phase_1: "phase1", run_phase_2: "phase2", run_phase_3: "phase3" })[name];
-const functionOutput = (callId, payload) => ({ type: "function_call_output", call_id: callId, output: JSON.stringify(payload) });
+const functionOutput = (name, callId, payload) => ({ role: "user", parts: [{ functionResponse: { name, id: callId, response: payload } }] });
 const known = new Set(TOOL_SCHEMAS.map((tool) => tool.name));
 
 export async function runAgent(runId, deps = {}) {
-  const store = deps.store || defaultStore; const callOpenAI = deps.callOpenAI || defaultCallOpenAI;
+  const store = deps.store || defaultStore; const callGemini = deps.callGemini || defaultCallGemini;
   const phaseRunners = deps.phaseRunners || { phase1: runPhase1, phase2: runPhase2, phase3: runPhase3 };
   const log = deps.logger || runLogger(runId);
   while (true) {
@@ -26,30 +26,31 @@ export async function runAgent(runId, deps = {}) {
     let action = run.pendingAction;
     if (!action) {
       log.info({ step: run.step }, "agent_request_started");
-      const response = await callOpenAI({ model: config.OPENAI_AGENT_MODEL, instructions: AGENT_SYSTEM_PROMPT, input: run.messages, tools: TOOL_SCHEMAS, tool_choice: "required", parallel_tool_calls: false });
-      const calls = (response.output || []).filter((item) => item.type === "function_call");
+      const response = await callGemini({ model: config.GEMINI_AGENT_MODEL, systemInstruction: { parts: [{ text: AGENT_SYSTEM_PROMPT }] }, contents: run.messages, tools: [{ functionDeclarations: TOOL_SCHEMAS }], toolConfig: { functionCallingConfig: { mode: "ANY" } } });
+      const content = candidateContent(response); const calls = (content.parts || []).filter((part) => part.functionCall).map((part) => part.functionCall);
       if (calls.length !== 1) return finish(store, run, { code: "INVALID_TOOL_RESPONSE", message: "Expected exactly one function_call" });
       const call = calls[0]; if (!known.has(call.name)) return finish(store, run, { code: "UNKNOWN_TOOL", message: call.name });
-      try { action = { callId: call.call_id, name: call.name, args: JSON.parse(call.arguments || "{}") }; } catch { return finish(store, run, { code: "INVALID_TOOL_ARGS", message: call.name }); }
+      if (!call.id || !call.args || typeof call.args !== "object") return finish(store, run, { code: "INVALID_TOOL_ARGS", message: call.name });
+      action = { callId: call.id, name: call.name, args: call.args };
       const phase = phaseFor(action.name); const attempts = { ...run.attempts };
       if (phase) attempts[phase] += 1;
-      await store.savePending(runId, { messages: [...run.messages, ...response.output], pendingAction: action, attempts });
+      await store.savePending(runId, { messages: [...run.messages, content], pendingAction: action, attempts });
       log.info({ step: run.step, tool: action.name }, "pending_action_saved"); run = await store.load(runId);
     }
-    const result = await execute(run, action, phaseRunners, callOpenAI);
-    const messages = [...run.messages, functionOutput(action.callId, result.payload)];
+    const result = await execute(run, action, phaseRunners, callGemini);
+    const messages = [...run.messages, functionOutput(action.name, action.callId, result.payload)];
     await store.completeAction(runId, { messages, ctx: result.ctx || run.ctx, status: result.status, artifact: result.artifact, error: result.error });
     log.info({ step: run.step, tool: action.name }, "tool_result_saved");
     if (result.status && result.status !== "running") return;
   }
 }
 
-async function execute(run, action, phaseRunners, callOpenAI) {
+async function execute(run, action, phaseRunners, callGemini) {
   const phase = phaseFor(action.name); const ctx = structuredClone(run.ctx);
   if (phase) {
     if (run.attempts[phase] > config.MAX_ATTEMPTS_PER_PHASE) return { payload: { ok: false, issues: ["phase attempt cap reached"] } };
     if (ctx[phase]?.callId === action.callId) return { payload: { ok: true, reused: true } };
-    const output = await phaseRunners[phase]({ input: run.input, retryHint: action.args.retryHint, callOpenAI });
+    const output = await phaseRunners[phase]({ input: run.input, retryHint: action.args.retryHint, callGemini });
     ctx[phase] = { callId: action.callId, attempt: run.attempts[phase], output };
     return { ctx, payload: { ok: true, summary: `${phase} stored` } };
   }

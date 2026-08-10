@@ -10,7 +10,7 @@ describe("agent limits", () => {
   it("fails before step twenty-one", async () => { const run = memoryRun({ step: config.MAX_STEPS }); await runAgent("r1", { store: storeFor(run) }); expect(run.status).toBe("failed"); expect(run.error.code).toBe("MAX_STEPS"); });
   it("does not execute a fourth phase attempt", async () => {
     const run = memoryRun({ attempts: { phase1: config.MAX_ATTEMPTS_PER_PHASE, phase2: 0, phase3: 0 } }); let calls = 0;
-    await runAgent("r1", { store: storeFor(run), callOpenAI: async () => ({ output: [{ type: "function_call", call_id: "c", name: "run_phase_1", arguments: "{\"retryHint\":null}" }] }), phaseRunners: { phase1: async () => { calls += 1; }, phase2: async () => {}, phase3: async () => {} } });
+    await runAgent("r1", { store: storeFor(run), callGemini: async () => ({ candidates: [{ content: { role: "model", parts: [{ functionCall: { id: "c", name: "run_phase_1", args: { retryHint: null } } }] } }] }), phaseRunners: { phase1: async () => { calls += 1; }, phase2: async () => {}, phase3: async () => {} } });
     expect(calls).toBe(0);
   });
 });
