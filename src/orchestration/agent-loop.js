@@ -50,13 +50,13 @@ async function execute(run, action, phaseRunners, callGemini) {
   if (phase) {
     if (run.attempts[phase] > config.MAX_ATTEMPTS_PER_PHASE) return { payload: { ok: false, issues: ["phase attempt cap reached"] } };
     if (ctx[phase]?.callId === action.callId) return { payload: { ok: true, reused: true } };
-    const output = await phaseRunners[phase]({ input: run.input, retryHint: action.args.retryHint, callGemini });
+    const output = await phaseRunners[phase]({ input: run.input, ctx, retryHint: action.args.retryHint, callGemini });
     ctx[phase] = { callId: action.callId, attempt: run.attempts[phase], output };
     return { ctx, payload: { ok: true, summary: `${phase} stored` } };
   }
   if (action.name.startsWith("validate_phase_")) {
     const number = action.name.at(-1); const key = `phase${number}`; const validator = ({ 1: validatePhase1, 2: validatePhase2, 3: validatePhase3 })[number];
-    const validation = validator(ctx[key]?.output, run.input); ctx[`${key}Validation`] = validation;
+    const validation = validator(ctx[key]?.output, run.input, ctx); ctx[`${key}Validation`] = validation;
     return { ctx, payload: validation };
   }
   if (action.name === "finalize") {

@@ -21,12 +21,12 @@ describe("agent workflow", () => {
       store: memoryStore(run),
       callGemini: async (request) => { calls.push(request); return selection(sequence.shift(), `call-${calls.length}`); },
       phaseRunners: {
-        phase1: async () => ({ findings: [{ claim: "Price matters", evidence: ["turn 1 sentence 0"] }] }),
-        phase2: async () => ({ hypotheses: [{ hypothesisId: "h0", assessment: "supported" }] }),
-        phase3: async () => ({ summary: "Price drives decisions.", evidence: "One interview statement.", recommendations: "Test price messaging." })
+        phase1: async () => ({ thematicAnalysis: { themes: [{ themeTitle: "Price", summary: "Price matters" }] }, keyInsights: { explicit: [{ insightSummary: "Price matters", sectionId: "explicit_1" }], implicit: [] }, executiveSummary: "Price drives decisions." }),
+        phase2: async () => ({ metaInsights: [{ shortExplanation: "Price first", strategicImplication: "Speed alone is weak", suggestedReframe: "Value" }] }),
+        phase3: async () => ({ analysis: [{ sectionId: "explicit_1", parentInsightTitle: "Price", parentInsightAnalysis: "Price matters", importance: 3, linkedHypotheses: [{ hypothesisId: "h0", supportStatus: "supports" }], childInsights: [{ turn: 1, sentenceStart: 0, sentenceEnd: 0, analysis: "Direct evidence", importance: 2, linkedHypotheses: [] }] }] })
       }
     });
-    expect(run.status).toBe("success"); expect(run.step).toBe(7); expect(run.artifact.analysis.summary).toContain("Price");
+    expect(run.status).toBe("success"); expect(run.step).toBe(7); expect(run.artifact.analysis[0].parentInsightTitle).toContain("Price");
     expect(run.messages.filter((item) => item.parts?.[0]?.functionResponse)).toHaveLength(7);
     expect(calls.every((request) => request.toolConfig.functionCallingConfig.mode === "ANY")).toBe(true);
   });
@@ -38,8 +38,8 @@ describe("agent workflow", () => {
       const name = names[call]; call += 1;
       const args = name === "run_phase_1" ? (call === 1 ? { retryHint: null } : { retryHint: "findings[0].evidence is required" }) : name === "abort_non_retryable" ? { reason: "test complete" } : {};
       return selection(name, `c${call}`, args);
-    }, phaseRunners: { phase1: async ({ retryHint }) => { hints.push(retryHint); return { findings: [{ claim: "x", evidence: [] }] }; }, phase2: async () => {}, phase3: async () => {} } });
+    }, phaseRunners: { phase1: async ({ retryHint }) => { hints.push(retryHint); return { thematicAnalysis: { themes: [] }, keyInsights: { explicit: [], implicit: [] }, executiveSummary: "x" }; }, phase2: async () => {}, phase3: async () => {} } });
     expect(hints).toEqual([null, "findings[0].evidence is required"]);
-    expect(JSON.stringify(requests[2].contents)).toContain("findings[0].evidence is required");
+    expect(JSON.stringify(requests[2].contents)).toContain("thematicAnalysis.themes must contain at least one theme");
   });
 });
