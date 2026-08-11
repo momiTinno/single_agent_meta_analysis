@@ -40,6 +40,8 @@ To emulate SQS locally instead of using an AWS account, run `npm run localstack:
 
 Create an SQS **Standard** queue and attach a dead-letter queue with a redrive policy of three receives. Set `SQS_QUEUE_URL` to the main queue URL. `npm start` runs only Express, while `npm run start:worker` runs one SQS worker. The worker long-polls for 20 seconds, starts each message with five minutes of visibility, and extends visibility every two minutes while a run is active.
 
+The worker writes structured JSON logs without transcript, prompt, API-key, or full-model-response content. Important events are `sqs_message_received`, `agent_action_selected`, `phase_execution_started`, `phase_execution_completed`, `phase_validation_passed`, `phase_validation_failed`, `phase_attempt_limit_reached`, `artifact_finalized`, `run_terminal`, and `sqs_message_deleted`. Failure logs include validator `issues`, phase attempt counts, durations, and terminal status.
+
 ## Postman API checks
 
 Import [`postman/Meta-Analysis-MVP.postman_collection.json`](postman/Meta-Analysis-MVP.postman_collection.json) into Postman. It covers every implemented HTTP endpoint:

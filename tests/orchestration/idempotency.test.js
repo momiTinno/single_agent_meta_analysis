@@ -32,8 +32,9 @@ describe("agent workflow", () => {
   });
   it("returns deterministic validation issues as the retry hint", async () => {
     const run = { runId: "retry", status: "running", input: { turns: [], bmc: { h0: "x" } }, messages: [], ctx: context(), attempts: { phase1: 0, phase2: 0, phase3: 0 }, pendingAction: null, step: 0 };
-    const names = ["run_phase_1", "validate_phase_1", "run_phase_1", "abort_non_retryable"]; let call = 0; const hints = []; const requests = [];
-    await runAgent("retry", { store: memoryStore(run), callGemini: async (request) => {
+    const names = ["run_phase_1", "validate_phase_1", "run_phase_1", "abort_non_retryable"]; let call = 0; const hints = []; const requests = []; const events = [];
+    const logger = { info: (fields) => events.push(fields), warn: (fields) => events.push(fields), error: (fields) => events.push(fields) };
+    await runAgent("retry", { store: memoryStore(run), logger, callGemini: async (request) => {
       requests.push(request);
       const name = names[call]; call += 1;
       const args = name === "run_phase_1" ? (call === 1 ? { retryHint: null } : { retryHint: "findings[0].evidence is required" }) : name === "abort_non_retryable" ? { reason: "test complete" } : {};
@@ -41,5 +42,7 @@ describe("agent workflow", () => {
     }, phaseRunners: { phase1: async ({ retryHint }) => { hints.push(retryHint); return { thematicAnalysis: { themes: [] }, keyInsights: { explicit: [], implicit: [] }, executiveSummary: "x" }; }, phase2: async () => {}, phase3: async () => {} } });
     expect(hints).toEqual([null, "findings[0].evidence is required"]);
     expect(JSON.stringify(requests[2].contents)).toContain("thematicAnalysis.themes must contain at least one theme");
+    expect(events).toContainEqual(expect.objectContaining({ event: "phase_validation_failed", phase: "phase1", issues: ["thematicAnalysis.themes must contain at least one theme"] }));
+    expect(events).toContainEqual(expect.objectContaining({ event: "run_terminal", status: "aborted" }));
   });
 });
