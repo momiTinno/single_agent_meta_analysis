@@ -23,6 +23,10 @@ curl http://localhost:3000/runs/<runId>/artifact
 
 Run `npm test` for deterministic validators, a complete mocked orchestration, runtime limit guards, and recovery semantics. Tests never call Gemini or MySQL.
 
+### Local SQS with LocalStack
+
+To emulate SQS locally instead of using an AWS account, run `npm run localstack:up`, then run `bash scripts/create-local-sqs.sh`. Set the printed `SQS_QUEUE_URL`, `SQS_ENDPOINT_URL=http://localhost:4566`, and dummy `AWS_ACCESS_KEY_ID=test` / `AWS_SECRET_ACCESS_KEY=test` in `.env`. The app uses the same AWS SDK code path against LocalStack. Use `npm run localstack:down` to stop it.
+
 ## SQS worker and logs
 
 Create an SQS **Standard** queue and attach a dead-letter queue with a redrive policy of three receives. Set `SQS_QUEUE_URL` to the main queue URL. `npm start` runs Express and one SQS worker in the same Node process, so Pino writes API, queue, and agent lifecycle events to the same terminal. The worker long-polls for 20 seconds, starts each message with five minutes of visibility, and extends visibility every two minutes while a run is active.

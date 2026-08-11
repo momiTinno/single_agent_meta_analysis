@@ -1,7 +1,7 @@
 import { ChangeMessageVisibilityCommand, DeleteMessageCommand, ReceiveMessageCommand, SendMessageCommand, SQSClient } from "@aws-sdk/client-sqs";
 import { awsConfig } from "../../config/aws.config.js";
 
-export function createSqsQueue({ client = new SQSClient({ region: awsConfig.region }), queueUrl = awsConfig.queueUrl, visibilityTimeoutSeconds = awsConfig.visibilityTimeoutSeconds, longPollSeconds = awsConfig.longPollSeconds } = {}) {
+export function createSqsQueue({ client = new SQSClient({ region: awsConfig.region, endpoint: awsConfig.endpointUrl }), queueUrl = awsConfig.queueUrl, visibilityTimeoutSeconds = awsConfig.visibilityTimeoutSeconds, longPollSeconds = awsConfig.longPollSeconds } = {}) {
   if (!queueUrl) throw new Error("SQS_QUEUE_URL is required");
   return {
     async enqueueRun(runId) { await client.send(new SendMessageCommand({ QueueUrl: queueUrl, MessageBody: JSON.stringify({ runId }) })); },

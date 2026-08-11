@@ -7,7 +7,9 @@
     "start": "node index.js",
     "dev": "node --watch index.js",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "localstack:up": "docker compose -f docker-compose.localstack.yml up -d",
+    "localstack:down": "docker compose -f docker-compose.localstack.yml down"
   },
   "dependencies": {
     "@aws-sdk/client-sqs": "^3.1106.0",

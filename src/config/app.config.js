@@ -6,7 +6,7 @@ const schema = z.object({
   PORT: integer(3000), GEMINI_API_KEY: z.string().default(""),
   GEMINI_AGENT_MODEL: z.string().min(1).default("gemini-2.5-flash"), GEMINI_PHASE_MODEL: z.string().min(1).default("gemini-2.5-flash"),
   GEMINI_MAX_RETRIES: integer(3), GEMINI_TIMEOUT_MS: integer(240000),
-  AWS_REGION: z.string().min(1).default("us-east-1"), SQS_QUEUE_URL: z.string().default(""),
+  AWS_REGION: z.string().min(1).default("us-east-1"), SQS_QUEUE_URL: z.string().default(""), SQS_ENDPOINT_URL: z.union([z.string().url(), z.literal("")]).default(""),
   SQS_VISIBILITY_TIMEOUT_SECONDS: integer(300), SQS_HEARTBEAT_SECONDS: integer(120), SQS_LONG_POLL_SECONDS: integer(20),
   MYSQL_HOST: z.string().min(1).default("127.0.0.1"), MYSQL_PORT: integer(3306), MYSQL_USER: z.string().default(""),
   MYSQL_PASSWORD: z.string().default(""), MYSQL_DATABASE: z.string().default(""), MYSQL_CONNECTION_LIMIT: integer(5),
