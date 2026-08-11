@@ -38,9 +38,9 @@ To emulate SQS locally instead of using an AWS account, run `npm run localstack:
 
 ## SQS worker and logs
 
-Create an SQS **Standard** queue and attach a dead-letter queue with a redrive policy of three receives. Set `SQS_QUEUE_URL` to the main queue URL. `npm start` runs only Express, while `npm run start:worker` runs one SQS worker. The worker long-polls for 20 seconds, starts each message with five minutes of visibility, and extends visibility every two minutes while a run is active.
+Create an SQS **Standard** queue and attach a dead-letter queue with a redrive policy of three receives. Set `SQS_QUEUE_URL` to the main queue URL. `npm start` runs only Express, while `npm run start:worker` runs one SQS worker. The worker long-polls for 20 seconds, starts each message with five minutes of visibility, and extends visibility every two minutes while a run is active. `npm run start:worker` enables readable colored terminal logs and safe phase-output summaries; use `npm run start:worker:json` for raw JSON logs.
 
-The worker writes structured JSON logs without transcript, prompt, API-key, or full-model-response content. Important events are `sqs_message_received`, `agent_action_selected`, `phase_execution_started`, `phase_execution_completed`, `phase_validation_passed`, `phase_validation_failed`, `phase_attempt_limit_reached`, `artifact_finalized`, `run_terminal`, and `sqs_message_deleted`. Failure logs include validator `issues`, phase attempt counts, durations, and terminal status.
+The worker logs the agent's observable choices and phase summaries, not private model reasoning. It excludes transcripts, prompts, API keys, and full-model-response content. Important events are `sqs_message_received`, `agent_action_selected`, `phase_execution_started`, `phase_execution_completed`, `phase_output_summary`, `phase_validation_passed`, `phase_validation_failed`, `phase_attempt_limit_reached`, `artifact_finalized`, `run_terminal`, and `sqs_message_deleted`. Failure logs include validator `issues`, phase attempt counts, durations, and terminal status.
 
 ## Postman API checks
 

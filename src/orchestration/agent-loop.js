@@ -17,6 +17,24 @@ const phaseFor = (name) => ({ run_phase_1: "phase1", run_phase_2: "phase2", run_
 const functionOutput = (name, callId, payload) => ({ role: "user", parts: [{ functionResponse: { name, id: callId, response: payload } }] });
 const known = new Set(TOOL_SCHEMAS.map((tool) => tool.name));
 const atLevel = (log, level) => typeof log[level] === "function" ? log[level].bind(log) : log.info.bind(log);
+const phaseOutputSummary = (phase, output) => {
+  if (phase === "phase1") return {
+    themeCount: output?.thematicAnalysis?.themes?.length || 0,
+    themeTitles: (output?.thematicAnalysis?.themes || []).map((theme) => theme.themeTitle).slice(0, 5),
+    explicitInsightCount: output?.keyInsights?.explicit?.length || 0,
+    implicitInsightCount: output?.keyInsights?.implicit?.length || 0,
+    executiveSummaryLength: output?.executiveSummary?.length || 0
+  };
+  if (phase === "phase2") return {
+    metaInsightCount: output?.metaInsights?.length || 0,
+    strategicImplicationLengths: (output?.metaInsights || []).map((insight) => insight.strategicImplication?.length || 0).slice(0, 5)
+  };
+  return {
+    analysisCount: output?.analysis?.length || 0,
+    sectionIds: (output?.analysis || []).map((item) => item.sectionId).slice(0, 10),
+    childInsightCount: (output?.analysis || []).reduce((count, item) => count + (item.childInsights?.length || 0), 0)
+  };
+};
 
 export async function runAgent(runId, deps = {}) {
   const store = deps.store || defaultStore; const callGemini = deps.callGemini || defaultCallGemini;
@@ -72,6 +90,7 @@ async function execute(run, action, phaseRunners, callGemini, log) {
     const output = await phaseRunners[phase]({ input: run.input, ctx, retryHint: action.args.retryHint, callGemini });
     ctx[phase] = { callId: action.callId, attempt: run.attempts[phase], output };
     log.info({ event: "phase_execution_completed", phase, attempt: run.attempts[phase], durationMs: Date.now() - phaseStartedAt }, "phase_execution_completed");
+    if (config.LOG_AGENT_OUTPUT) log.info({ event: "phase_output_summary", phase, attempt: run.attempts[phase], summary: phaseOutputSummary(phase, output) }, "phase_output_summary");
     return { ctx, payload: { ok: true, summary: `${phase} stored` } };
   }
   if (action.name.startsWith("validate_phase_")) {
