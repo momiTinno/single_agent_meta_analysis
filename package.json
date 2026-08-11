@@ -6,6 +6,8 @@
   "scripts": {
     "start": "node index.js",
     "dev": "node --watch index.js",
+    "start:worker": "node worker.js",
+    "dev:worker": "node --watch worker.js",
     "test": "vitest run",
     "test:watch": "vitest",
     "localstack:up": "docker compose -f docker-compose.localstack.yml up -d",

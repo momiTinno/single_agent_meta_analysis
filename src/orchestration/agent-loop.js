@@ -11,6 +11,7 @@ import { validatePhase3 } from "../modules/analysis/validators/phase-three.valid
 import { finalize, abort } from "./terminals.js";
 import { runLogger } from "../utils/logger.util.js";
 import { runStore as defaultStore } from "../modules/runs/services/run-db.service.js";
+import { createUuid } from "../utils/uuid.util.js";
 
 const phaseFor = (name) => ({ run_phase_1: "phase1", run_phase_2: "phase2", run_phase_3: "phase3" })[name];
 const functionOutput = (name, callId, payload) => ({ role: "user", parts: [{ functionResponse: { name, id: callId, response: payload } }] });
@@ -30,8 +31,8 @@ export async function runAgent(runId, deps = {}) {
       const content = candidateContent(response); const calls = (content.parts || []).filter((part) => part.functionCall).map((part) => part.functionCall);
       if (calls.length !== 1) return finish(store, run, { code: "INVALID_TOOL_RESPONSE", message: "Expected exactly one function_call" });
       const call = calls[0]; if (!known.has(call.name)) return finish(store, run, { code: "UNKNOWN_TOOL", message: call.name });
-      if (!call.id || !call.args || typeof call.args !== "object") return finish(store, run, { code: "INVALID_TOOL_ARGS", message: call.name });
-      action = { callId: call.id, name: call.name, args: call.args };
+      if (call.args !== undefined && (call.args === null || typeof call.args !== "object" || Array.isArray(call.args))) return finish(store, run, { code: "INVALID_TOOL_ARGS", message: call.name });
+      action = { callId: call.id || createUuid(), name: call.name, args: call.args || {} };
       const phase = phaseFor(action.name); const attempts = { ...run.attempts };
       if (phase) attempts[phase] += 1;
       await store.savePending(runId, { messages: [...run.messages, content], pendingAction: action, attempts });

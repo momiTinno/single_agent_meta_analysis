@@ -19,7 +19,7 @@ describe("agent workflow", () => {
     const calls = [];
     await runAgent(run.runId, {
       store: memoryStore(run),
-      callGemini: async (request) => { calls.push(request); return selection(sequence.shift(), `call-${calls.length}`); },
+      callGemini: async (request) => { calls.push(request); const name = sequence.shift(); return calls.length === 1 ? { candidates: [{ content: { role: "model", parts: [{ functionCall: { name } }] } }] } : selection(name, `call-${calls.length}`); },
       phaseRunners: {
         phase1: async () => ({ thematicAnalysis: { themes: [{ themeTitle: "Price", summary: "Price matters" }] }, keyInsights: { explicit: [{ insightSummary: "Price matters", sectionId: "explicit_1" }], implicit: [] }, executiveSummary: "Price drives decisions." }),
         phase2: async () => ({ metaInsights: [{ shortExplanation: "Price first", strategicImplication: "Speed alone is weak", suggestedReframe: "Value" }] }),
