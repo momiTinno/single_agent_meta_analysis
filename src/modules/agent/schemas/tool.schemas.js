@@ -11,5 +11,9 @@ export const TOOL_SCHEMAS = [
   tool("run_phase_3", "Run phase 3 or retry it using validator feedback.", retryParameters),
   tool("validate_phase_3", "Deterministically validate phase 3.", noParameters),
   tool("finalize", "Create the final artifact only after every validation passes.", noParameters),
-  tool("abort_non_retryable", "Stop when the workflow cannot safely continue.", { type: "OBJECT", properties: { reason: { type: "STRING" } }, required: ["reason"] })
+  tool("abort_non_retryable", "Stop when the workflow cannot safely continue.", {
+    type: "OBJECT",
+    properties: { reason: { type: "STRING" } },
+    required: ["reason"],
+  }),
 ];

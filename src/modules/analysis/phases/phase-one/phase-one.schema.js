@@ -1,2 +1,36 @@
-const insight = { type: "object", properties: { insightSummary: { type: "string" }, sectionId: { type: "string" } }, required: ["insightSummary"], additionalProperties: false };
-export const PHASE_ONE_SCHEMA = { type: "object", properties: { thematicAnalysis: { type: "object", properties: { themes: { type: "array", items: { type: "object", properties: { themeTitle: { type: "string" }, summary: { type: "string" } }, required: ["themeTitle", "summary"], additionalProperties: false } } }, required: ["themes"], additionalProperties: false }, keyInsights: { type: "object", properties: { explicit: { type: "array", items: insight }, implicit: { type: "array", items: insight } }, required: ["explicit", "implicit"], additionalProperties: false }, executiveSummary: { type: "string" } }, required: ["thematicAnalysis", "keyInsights", "executiveSummary"], additionalProperties: false };
+const insight = {
+  type: "object",
+  properties: { insightSummary: { type: "string" }, sectionId: { type: "string" } },
+  required: ["insightSummary"],
+  additionalProperties: false,
+};
+export const PHASE_ONE_SCHEMA = {
+  type: "object",
+  properties: {
+    thematicAnalysis: {
+      type: "object",
+      properties: {
+        themes: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: { themeTitle: { type: "string" }, summary: { type: "string" } },
+            required: ["themeTitle", "summary"],
+            additionalProperties: false,
+          },
+        },
+      },
+      required: ["themes"],
+      additionalProperties: false,
+    },
+    keyInsights: {
+      type: "object",
+      properties: { explicit: { type: "array", items: insight }, implicit: { type: "array", items: insight } },
+      required: ["explicit", "implicit"],
+      additionalProperties: false,
+    },
+    executiveSummary: { type: "string" },
+  },
+  required: ["thematicAnalysis", "keyInsights", "executiveSummary"],
+  additionalProperties: false,
+};
