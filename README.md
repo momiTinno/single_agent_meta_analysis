@@ -6,7 +6,12 @@ A small Node.js teaching demo of raw Gemini `generateContent` REST API function 
 
 1. Install Node.js 20+ and MySQL 8+.
 2. Run `npm install`, then copy `.env.example` to `.env` and set the Gemini API key, AWS region/SQS queue URL, and MySQL credentials. AWS authentication follows the standard AWS SDK credential chain (for example, `aws configure` locally or an IAM role in AWS).
-3. Create your MySQL database/user, then apply `mysql -u <user> -p <database> < src/db/mysql/migrations/001-create-runs.sql`.
+3. Create your MySQL database/user, then apply both migrations in order:
+
+```bash
+mysql -u <user> -p <database> < src/db/mysql/migrations/001-create-runs.sql
+mysql -u <user> -p <database> < src/db/mysql/migrations/002-add-model-usage.sql
+```
 4. Start the API and background worker in separate terminals:
 
 ```bash
@@ -26,6 +31,9 @@ curl -X POST http://localhost:3000/runs \
 
 curl http://localhost:3000/runs/<runId>
 
+# Retrieve aggregate and per-Gemini-call token usage:
+curl http://localhost:3000/runs/<runId>/usage
+
 # After status is "success", retrieve only the final analysis artifact:
 curl http://localhost:3000/runs/<runId>/artifact
 ```
@@ -40,7 +48,7 @@ To emulate SQS locally instead of using an AWS account, run `npm run localstack:
 
 Create an SQS **Standard** queue and attach a dead-letter queue with a redrive policy of three receives. Set `SQS_QUEUE_URL` to the main queue URL. `npm start` runs only Express, while `npm run start:worker` runs one SQS worker. The worker long-polls for 20 seconds, starts each message with five minutes of visibility, and extends visibility every two minutes while a run is active. `npm run start:worker` enables readable colored terminal logs and safe phase-output summaries; use `npm run start:worker:json` for raw JSON logs.
 
-The worker logs the agent's observable choices and phase summaries, not private model reasoning. It excludes transcripts, prompts, API keys, and full-model-response content. Important events are `sqs_message_received`, `agent_action_selected`, `phase_execution_started`, `phase_execution_completed`, `phase_output_summary`, `phase_validation_passed`, `phase_validation_failed`, `phase_attempt_limit_reached`, `artifact_finalized`, `run_terminal`, and `sqs_message_deleted`. Failure logs include validator `issues`, phase attempt counts, durations, and terminal status.
+The worker logs the agent's observable choices and phase summaries, not private model reasoning. It excludes transcripts, prompts, API keys, and full-model-response content. Important events are `sqs_message_received`, `agent_action_selected`, `gemini_usage_recorded`, `phase_execution_started`, `phase_execution_completed`, `phase_output_summary`, `phase_validation_passed`, `phase_validation_failed`, `phase_attempt_limit_reached`, `artifact_finalized`, `run_terminal`, and `sqs_message_deleted`. A `gemini_usage_recorded` event includes prompt, response, thought, and total tokens plus the cumulative run total. Failure logs include validator `issues`, phase attempt counts, durations, and terminal status.
 
 ## Postman API checks
 
@@ -48,6 +56,7 @@ Import [`postman/Meta-Analysis-MVP.postman_collection.json`](postman/Meta-Analys
 
 - `POST /runs`: successful submission and invalid-input rejection.
 - `GET /runs/:runId`: status retrieval.
+- `GET /runs/:runId/usage`: aggregate and per-call Gemini token usage.
 - `GET /runs/:runId/artifact`: accepts `409` while processing and validates the completed artifact when it returns `200`.
 - `GET /runs/:unknownId`: not-found response.
 
@@ -65,4 +74,4 @@ Recovery is at-least-once for external phase calls: a crash after a phase respon
 
 `src/config` contains startup configuration; `src/db/mysql` contains the direct MySQL connection and migration; `src/modules/runs` owns the HTTP and persistence lifecycle; `src/modules/queue` owns SQS transport and the worker loop; `src/modules/agent` exposes the agent contracts; `src/modules/analysis` owns phase calls and validators; `src/modules/gemini` owns raw API transport; and `src/orchestration` owns the durable agent loop and terminals.
 
-Start with `src/db/mysql/migrations/001-create-runs.sql`, then `src/orchestration/agent-loop.js`, `src/modules/agent/schemas/tool.schemas.js`, `src/modules/runs/services/run-db.service.js`, a phase and validator, `src/modules/runs/services/run-recovery.service.js`, and finally `src/index.js`. The user-story backlog is in `USER_STORIES.md`.
+Start with `src/db/mysql/migrations/001-create-runs.sql` and `002-add-model-usage.sql`, then `src/orchestration/agent-loop.js`, `src/modules/agent/schemas/tool.schemas.js`, `src/modules/runs/services/run-db.service.js`, a phase and validator, `src/modules/runs/services/run-recovery.service.js`, and finally `src/index.js`. The user-story backlog is in `USER_STORIES.md`.

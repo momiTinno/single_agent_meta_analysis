@@ -5,4 +5,5 @@ export const runResponse = (run) => ({
   error: run.error,
   attempts: run.attempts,
   step: run.step,
+  usage: run.usage,
 });

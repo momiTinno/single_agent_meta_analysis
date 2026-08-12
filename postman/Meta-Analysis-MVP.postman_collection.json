@@ -54,6 +54,25 @@
       ]
     },
     {
+      "name": "Get Gemini token usage",
+      "request": { "method": "GET", "url": "{{baseUrl}}/runs/{{runId}}/usage" },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('returns 200', () => pm.response.to.have.status(200));",
+              "const body = pm.response.json();",
+              "pm.expect(body.runId).to.eql(pm.collectionVariables.get('runId'));",
+              "pm.expect(body.usage).to.have.property('totalTokens');",
+              "pm.expect(body.calls).to.be.an('array');"
+            ]
+          }
+        }
+      ]
+    },
+    {
       "name": "Get final artifact",
       "request": { "method": "GET", "url": "{{baseUrl}}/runs/{{runId}}/artifact" },
       "event": [

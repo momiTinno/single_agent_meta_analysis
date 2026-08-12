@@ -1,5 +1,5 @@
 import { config } from "../config/app.config.js";
-import { callGemini as defaultCallGemini, candidateContent } from "../modules/gemini/gemini.client.js";
+import { callGemini as defaultCallGemini, candidateContent, usageMetadata } from "../modules/gemini/gemini.client.js";
 import { TOOL_SCHEMAS } from "../modules/agent/schemas/tool.schemas.js";
 import { AGENT_SYSTEM_PROMPT } from "../modules/agent/agent.prompt.js";
 import { runPhase1 } from "../modules/analysis/phases/phase-one/phase-one.service.js";
@@ -42,6 +42,43 @@ const phaseOutputSummary = (phase, output) => {
     childInsightCount: (output?.analysis || []).reduce((count, item) => count + (item.childInsights?.length || 0), 0),
   };
 };
+const trackedGeminiCall =
+  ({ run, store, log, callGemini, callType, phaseName = null, phaseAttempt = null }) =>
+  async (request) => {
+    const startedAt = Date.now();
+    const response = await callGemini(request);
+    const tokens = usageMetadata(response);
+    if (typeof store.recordModelCall !== "function") return response;
+    const totals = await store.recordModelCall({
+      callId: createUuid(),
+      runId: run.runId,
+      workflowStep: run.step,
+      callType,
+      phaseName,
+      phaseAttempt,
+      model: request.model,
+      ...tokens,
+      durationMs: Date.now() - startedAt,
+    });
+    log.info(
+      {
+        event: "gemini_usage_recorded",
+        callType,
+        phase: phaseName || undefined,
+        attempt: phaseAttempt || undefined,
+        model: request.model,
+        inputTokens: tokens.inputTokens,
+        outputTokens: tokens.outputTokens,
+        thoughtsTokens: tokens.thoughtsTokens,
+        totalTokens: tokens.totalTokens,
+        usageAvailable: tokens.usageAvailable,
+        runTotalTokens: totals.totalTokens,
+        runModelCallCount: totals.modelCallCount,
+      },
+      "gemini_usage_recorded"
+    );
+    return response;
+  };
 
 export async function runAgent(runId, deps = {}) {
   const store = deps.store || defaultStore;
@@ -61,7 +98,13 @@ export async function runAgent(runId, deps = {}) {
         { event: "agent_request_started", step: run.step, messageCount: run.messages.length, attempts: run.attempts },
         "agent_request_started"
       );
-      const response = await callGemini({
+      const response = await trackedGeminiCall({
+        run,
+        store,
+        log,
+        callGemini,
+        callType: "agent_decision",
+      })({
         model: config.GEMINI_AGENT_MODEL,
         systemInstruction: { parts: [{ text: AGENT_SYSTEM_PROMPT }] },
         contents: run.messages,
@@ -107,7 +150,7 @@ export async function runAgent(runId, deps = {}) {
       run = await store.load(runId);
     }
     const actionStartedAt = Date.now();
-    const result = await execute(run, action, phaseRunners, callGemini, log);
+    const result = await execute(run, action, phaseRunners, callGemini, log, store);
     const messages = [...run.messages, functionOutput(action.name, action.callId, result.payload)];
     await store.completeAction(runId, {
       messages,
@@ -137,6 +180,7 @@ export async function runAgent(runId, deps = {}) {
           step: run.step + 1,
           durationMs: Date.now() - startedAt,
           error: result.error?.code || undefined,
+          usage: (await store.load(runId))?.usage,
         },
         "run_terminal"
       );
@@ -145,7 +189,7 @@ export async function runAgent(runId, deps = {}) {
   }
 }
 
-async function execute(run, action, phaseRunners, callGemini, log) {
+async function execute(run, action, phaseRunners, callGemini, log, store) {
   const phase = phaseFor(action.name);
   const ctx = structuredClone(run.ctx);
   if (phase) {
@@ -177,7 +221,20 @@ async function execute(run, action, phaseRunners, callGemini, log) {
       },
       "phase_execution_started"
     );
-    const output = await phaseRunners[phase]({ input: run.input, ctx, retryHint: action.args.retryHint, callGemini });
+    const output = await phaseRunners[phase]({
+      input: run.input,
+      ctx,
+      retryHint: action.args.retryHint,
+      callGemini: trackedGeminiCall({
+        run,
+        store,
+        log,
+        callGemini,
+        callType: "phase_execution",
+        phaseName: phase,
+        phaseAttempt: run.attempts[phase],
+      }),
+    });
     ctx[phase] = { callId: action.callId, attempt: run.attempts[phase], output };
     log.info(
       {

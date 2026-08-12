@@ -44,3 +44,28 @@ export function outputText(response) {
   if (!text) throw new Error("Gemini result did not contain text");
   return text;
 }
+
+const tokenCount = (value) => (Number.isSafeInteger(value) && value >= 0 ? value : 0);
+export function usageMetadata(response) {
+  const metadata = response.usageMetadata;
+  if (!metadata) {
+    return {
+      inputTokens: 0,
+      outputTokens: 0,
+      thoughtsTokens: 0,
+      cachedTokens: 0,
+      toolUsePromptTokens: 0,
+      totalTokens: 0,
+      usageAvailable: false,
+    };
+  }
+  return {
+    inputTokens: tokenCount(metadata.promptTokenCount),
+    outputTokens: tokenCount(metadata.candidatesTokenCount),
+    thoughtsTokens: tokenCount(metadata.thoughtsTokenCount),
+    cachedTokens: tokenCount(metadata.cachedContentTokenCount),
+    toolUsePromptTokens: tokenCount(metadata.toolUsePromptTokenCount),
+    totalTokens: tokenCount(metadata.totalTokenCount),
+    usageAvailable: true,
+  };
+}

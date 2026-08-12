@@ -6,6 +6,7 @@ export function createRunRoutes(deps) {
   const controller = createRunController(deps);
   routes.post("/", validateRunInput, controller.create);
   routes.get("/:id/artifact", controller.artifact);
+  routes.get("/:id/usage", controller.usage);
   routes.get("/:id", controller.get);
   return routes;
 }

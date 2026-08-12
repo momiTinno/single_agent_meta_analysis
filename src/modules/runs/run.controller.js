@@ -29,5 +29,14 @@ export function createRunController(deps) {
         next(error);
       }
     },
+    usage: async (request, response, next) => {
+      try {
+        const run = await deps.store.load(request.params.id);
+        if (!run) return response.status(404).json({ error: "run not found" });
+        return response.json({ runId: run.runId, usage: run.usage, calls: await deps.store.listModelCalls(run.runId) });
+      } catch (error) {
+        next(error);
+      }
+    },
   };
 }

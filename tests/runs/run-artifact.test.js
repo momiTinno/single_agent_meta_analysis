@@ -32,4 +32,17 @@ describe("run artifact controller", () => {
     expect(res.statusCode).toBe(409);
     expect(res.body.status).toBe("running");
   });
+  it("returns aggregate and per-call model usage", async () => {
+    const controller = createRunController({
+      store: {
+        load: async () => ({ runId: "r1", usage: { totalTokens: 42 } }),
+        listModelCalls: async () => [{ callType: "phase_execution", totalTokens: 42 }],
+      },
+    });
+    const res = response();
+    await controller.usage({ params: { id: "r1" } }, res, () => {});
+    expect(res.statusCode).toBe(200);
+    expect(res.body.usage.totalTokens).toBe(42);
+    expect(res.body.calls).toHaveLength(1);
+  });
 });
