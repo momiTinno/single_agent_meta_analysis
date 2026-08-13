@@ -50,6 +50,18 @@ Create an SQS **Standard** queue and attach a dead-letter queue with a redrive p
 
 The worker logs the agent's observable choices and phase summaries, not private model reasoning. It excludes transcripts, prompts, API keys, and full-model-response content. Important events are `sqs_message_received`, `agent_action_selected`, `gemini_usage_recorded`, `phase_execution_started`, `phase_execution_completed`, `phase_output_summary`, `phase_validation_passed`, `phase_validation_failed`, `phase_attempt_limit_reached`, `artifact_finalized`, `run_terminal`, and `sqs_message_deleted`. A `gemini_usage_recorded` event includes prompt, response, thought, and total tokens plus the cumulative run total. Failure logs include validator `issues`, phase attempt counts, durations, and terminal status.
 
+### Optional LangSmith tracing
+
+Installations run normally without LangSmith. To trace one complete agent run and its nested Gemini decision/phase calls, deterministic validations, and finalization, add the following to `.env` and restart the worker:
+
+```bash
+LANGSMITH_TRACING=true
+LANGSMITH_API_KEY=<your LangSmith API key>
+LANGSMITH_PROJECT=meta-analysis-mvp
+```
+
+This integration is trace-only: it does not change orchestration, retries, SQS, persistence, or token accounting. To protect interview data, traces include only operational metadata (run ID, step, phase, attempt, model, counts, and safe summaries). The application deliberately excludes transcripts, BMC data, prompts, API keys, raw Gemini requests/responses, and final-artifact text from LangSmith.
+
 ## Postman API checks
 
 Import [`postman/Meta-Analysis-MVP.postman_collection.json`](postman/Meta-Analysis-MVP.postman_collection.json) into Postman. It covers every implemented HTTP endpoint:
