@@ -4,8 +4,8 @@ import { config } from "../../config/app.config.js";
 export const langSmithTracingEnabled = () => config.LANGSMITH_TRACING && Boolean(config.LANGSMITH_API_KEY);
 
 /**
- * Trace a workflow operation without putting interview content, prompts, or full
- * Gemini responses into LangSmith. Nested calls automatically become child runs.
+ * Trace a workflow operation in LangSmith. Nested calls automatically become
+ * child runs of the current workflow trace.
  */
 export async function traceOperation({ name, runType = "chain", input, metadata, summarize }, operation) {
   if (!langSmithTracingEnabled()) return operation();

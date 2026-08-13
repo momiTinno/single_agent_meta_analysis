@@ -43,30 +43,6 @@ const phaseOutputSummary = (phase, output) => {
     childInsightCount: (output?.analysis || []).reduce((count, item) => count + (item.childInsights?.length || 0), 0),
   };
 };
-const traceOutputSummary = (phase, output) => {
-  if (phase === "phase1")
-    return {
-      themeCount: output?.thematicAnalysis?.themes?.length || 0,
-      explicitInsightCount: output?.keyInsights?.explicit?.length || 0,
-      implicitInsightCount: output?.keyInsights?.implicit?.length || 0,
-      hasExecutiveSummary: Boolean(output?.executiveSummary),
-    };
-  if (phase === "phase2") return { metaInsightCount: output?.metaInsights?.length || 0 };
-  return {
-    analysisCount: output?.analysis?.length || 0,
-    childInsightCount: (output?.analysis || []).reduce((count, item) => count + (item.childInsights?.length || 0), 0),
-  };
-};
-const traceGeminiUsage = (response) => {
-  const usage = usageMetadata(response);
-  return {
-    inputTokens: usage.inputTokens,
-    outputTokens: usage.outputTokens,
-    thoughtsTokens: usage.thoughtsTokens,
-    totalTokens: usage.totalTokens,
-    usageAvailable: usage.usageAvailable,
-  };
-};
 const trackedGeminiCall =
   ({ run, store, log, callGemini, callType, phaseName = null, phaseAttempt = null }) =>
   async (request) => {
@@ -135,21 +111,20 @@ async function runAgentLoop(runId, deps, log) {
         { event: "agent_request_started", step: run.step, messageCount: run.messages.length, attempts: run.attempts },
         "agent_request_started"
       );
+      const agentRequest = {
+        model: config.GEMINI_AGENT_MODEL,
+        systemInstruction: { parts: [{ text: AGENT_SYSTEM_PROMPT }] },
+        contents: run.messages,
+        tools: [{ functionDeclarations: TOOL_SCHEMAS }],
+        toolConfig: { functionCallingConfig: { mode: "ANY" } },
+      };
       const response = await traceOperation(
         {
           name: "Gemini agent decision",
           runType: "llm",
-          input: { runId, step: run.step, messageCount: run.messages.length, model: config.GEMINI_AGENT_MODEL },
+          input: { runId, step: run.step, request: agentRequest },
           metadata: { runId, step: run.step, callType: "agent_decision", model: config.GEMINI_AGENT_MODEL },
-          summarize: (value) => {
-            const content = candidateContent(value);
-            const calls = (content.parts || []).filter((part) => part.functionCall).map((part) => part.functionCall);
-            return {
-              ...traceGeminiUsage(value),
-              functionCallCount: calls.length,
-              selectedTool: calls[0]?.name || null,
-            };
-          },
+          summarize: (value) => value,
         },
         () =>
           trackedGeminiCall({
@@ -158,13 +133,7 @@ async function runAgentLoop(runId, deps, log) {
             log,
             callGemini,
             callType: "agent_decision",
-          })({
-            model: config.GEMINI_AGENT_MODEL,
-            systemInstruction: { parts: [{ text: AGENT_SYSTEM_PROMPT }] },
-            contents: run.messages,
-            tools: [{ functionDeclarations: TOOL_SCHEMAS }],
-            toolConfig: { functionCallingConfig: { mode: "ANY" } },
-          })
+          })(agentRequest)
       );
       const content = candidateContent(response);
       const calls = (content.parts || []).filter((part) => part.functionCall).map((part) => part.functionCall);
@@ -284,10 +253,9 @@ async function execute(run, action, phaseRunners, callGemini, log, store) {
           runId: run.runId,
           phase,
           attempt: run.attempts[phase],
-          turnCount: run.input.turns.length,
-          hypothesisCount: Object.keys(run.input.bmc).length,
-          hasRetryHint: Boolean(action.args.retryHint),
-          model: config.GEMINI_PHASE_MODEL,
+          input: run.input,
+          ctx,
+          retryHint: action.args.retryHint,
         },
         metadata: {
           runId: run.runId,
@@ -296,7 +264,7 @@ async function execute(run, action, phaseRunners, callGemini, log, store) {
           callType: "phase_execution",
           model: config.GEMINI_PHASE_MODEL,
         },
-        summarize: (value) => traceOutputSummary(phase, value),
+        summarize: (value) => value,
       },
       () =>
         phaseRunners[phase]({
@@ -308,7 +276,7 @@ async function execute(run, action, phaseRunners, callGemini, log, store) {
               {
                 name: `Gemini ${phase} request`,
                 runType: "llm",
-                input: { runId: run.runId, phase, attempt: run.attempts[phase], model: request.model },
+                input: { runId: run.runId, phase, attempt: run.attempts[phase], request },
                 metadata: {
                   runId: run.runId,
                   phase,
@@ -316,7 +284,7 @@ async function execute(run, action, phaseRunners, callGemini, log, store) {
                   callType: "phase_execution",
                   model: request.model,
                 },
-                summarize: traceGeminiUsage,
+                summarize: (value) => value,
               },
               () =>
                 trackedGeminiCall({
@@ -361,9 +329,16 @@ async function execute(run, action, phaseRunners, callGemini, log, store) {
       {
         name: `${key} deterministic validation`,
         runType: "tool",
-        input: { runId: run.runId, phase: key, attempt: run.attempts[key] },
+        input: {
+          runId: run.runId,
+          phase: key,
+          attempt: run.attempts[key],
+          phaseOutput: ctx[key]?.output,
+          input: run.input,
+          ctx,
+        },
         metadata: { runId: run.runId, phase: key, operation: "validation" },
-        summarize: (value) => ({ ok: value.ok, issueCount: value.issues.length }),
+        summarize: (value) => value,
       },
       () => validator(ctx[key]?.output, run.input, ctx)
     );
@@ -398,13 +373,9 @@ async function execute(run, action, phaseRunners, callGemini, log, store) {
       {
         name: "Finalize meta-analysis artifact",
         runType: "chain",
-        input: { runId: run.runId },
+        input: { runId: run.runId, input: run.input, ctx },
         metadata: { runId: run.runId, operation: "finalize" },
-        summarize: (value) => ({
-          themeCount: value.thematicAnalysis.themes.length,
-          metaInsightCount: value.metaInsights.length,
-          analysisCount: value.analysis.length,
-        }),
+        summarize: (value) => value,
       },
       () => finalize(run)
     );

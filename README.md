@@ -60,7 +60,7 @@ LANGSMITH_API_KEY=<your LangSmith API key>
 LANGSMITH_PROJECT=meta-analysis-mvp
 ```
 
-This integration is trace-only: it does not change orchestration, retries, SQS, persistence, or token accounting. To protect interview data, traces include only operational metadata (run ID, step, phase, attempt, model, counts, and safe summaries). The application deliberately excludes transcripts, BMC data, prompts, API keys, raw Gemini requests/responses, and final-artifact text from LangSmith.
+This integration is trace-only: it does not change orchestration, retries, SQS, persistence, or token accounting. It is configured for full debugging visibility: LangSmith records transcripts, BMC data, prompts, agent messages, raw Gemini requests/responses, phase outputs, validation results, and the final artifact. API keys are not sent. Enable it only in a LangSmith project approved to hold this interview data.
 
 ## Postman API checks
 
