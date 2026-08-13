@@ -1,0 +1,9 @@
+services:
+  localstack:
+    # Version 3.x is the Community image and runs SQS without a LocalStack auth token.
+    image: localstack/localstack:3.8.1
+    ports:
+      - "4566:4566"
+    environment:
+      SERVICES: sqs
+      SQS_ENDPOINT_STRATEGY: path

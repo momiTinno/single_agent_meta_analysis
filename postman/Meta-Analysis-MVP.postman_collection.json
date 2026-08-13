@@ -1,0 +1,136 @@
+{
+  "info": {
+    "name": "Meta-Analysis MVP",
+    "description": "All public API checks. Start the API and worker separately before running the happy-path requests.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000" },
+    { "key": "runId", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Create run — happy path",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": "{{baseUrl}}/runs",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"turns\": [{\n    \"turn\": 1,\n    \"speaker\": \"participant\",\n    \"sentences\": {\n      \"0\": \"I plan my grocery shopping every Sunday.\",\n      \"1\": \"Price matters more than delivery speed.\"\n    }\n  }],\n  \"bmc\": {\n    \"h0\": \"Urban professionals order groceries weekly\",\n    \"h1\": \"Price is the primary purchase driver\"\n  }\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('returns 202', () => pm.response.to.have.status(202));",
+              "const body = pm.response.json();",
+              "pm.expect(body.runId).to.be.a('string');",
+              "pm.collectionVariables.set('runId', body.runId);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Get run status",
+      "request": { "method": "GET", "url": "{{baseUrl}}/runs/{{runId}}" },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('returns 200', () => pm.response.to.have.status(200));",
+              "const body = pm.response.json();",
+              "pm.expect(body.runId).to.eql(pm.collectionVariables.get('runId'));",
+              "pm.expect(body.status).to.be.oneOf(['running', 'success', 'failed', 'aborted']);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Get Gemini token usage",
+      "request": { "method": "GET", "url": "{{baseUrl}}/runs/{{runId}}/usage" },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('returns 200', () => pm.response.to.have.status(200));",
+              "const body = pm.response.json();",
+              "pm.expect(body.runId).to.eql(pm.collectionVariables.get('runId'));",
+              "pm.expect(body.usage).to.have.property('totalTokens');",
+              "pm.expect(body.calls).to.be.an('array');"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Get final artifact",
+      "request": { "method": "GET", "url": "{{baseUrl}}/runs/{{runId}}/artifact" },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('is ready or still processing', () => pm.expect(pm.response.code).to.be.oneOf([200, 409]));",
+              "if (pm.response.code === 200) {",
+              "  const body = pm.response.json();",
+              "  pm.expect(body.artifact).to.have.property('thematicAnalysis');",
+              "  pm.expect(body.artifact).to.have.property('keyInsights');",
+              "  pm.expect(body.artifact).to.have.property('executiveSummary');",
+              "  pm.expect(body.artifact).to.have.property('metaInsights');",
+              "  pm.expect(body.artifact).to.have.property('analysis');",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Reject invalid create request",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": "{{baseUrl}}/runs",
+        "body": { "mode": "raw", "raw": "{\"turns\": [], \"bmc\": {}}" }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('returns 400', () => pm.response.to.have.status(400));",
+              "pm.expect(pm.response.json().error).to.eql('invalid request');"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Unknown run returns 404",
+      "request": { "method": "GET", "url": "{{baseUrl}}/runs/00000000-0000-0000-0000-000000000000" },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('returns 404', () => pm.response.to.have.status(404));",
+              "pm.expect(pm.response.json().error).to.eql('run not found');"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

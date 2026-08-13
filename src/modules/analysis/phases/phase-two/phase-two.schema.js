@@ -1,1 +1,20 @@
-export const PHASE_TWO_SCHEMA = { type: "object", properties: { hypotheses: { type: "array", items: { type: "object", properties: { hypothesisId: { type: "string" }, assessment: { type: "string" } }, required: ["hypothesisId", "assessment"], additionalProperties: false } } }, required: ["hypotheses"], additionalProperties: false };
+export const PHASE_TWO_SCHEMA = {
+  type: "object",
+  properties: {
+    metaInsights: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          shortExplanation: { type: "string" },
+          strategicImplication: { type: "string" },
+          suggestedReframe: { type: "string" },
+        },
+        required: ["shortExplanation", "strategicImplication", "suggestedReframe"],
+        additionalProperties: false,
+      },
+    },
+  },
+  required: ["metaInsights"],
+  additionalProperties: false,
+};

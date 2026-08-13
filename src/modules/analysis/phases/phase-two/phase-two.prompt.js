@@ -1,1 +1,3 @@
-export const PHASE_TWO_PROMPT = "Perform phase 2: assess the supplied hypotheses against the phase evidence. Return only JSON.";
+// Replace this string with your approved Phase 2 prompt. Input JSON has `json_transcript` and `thematic_analysis`.
+export const PHASE_TWO_PROMPT =
+  "Perform Phase 2 meta-level analysis. Use json_transcript and thematic_analysis to produce strategic metaInsights. Return only JSON matching the schema.";
